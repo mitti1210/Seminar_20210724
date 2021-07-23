@@ -21,6 +21,8 @@ summary2019 <-
   read_excel("input/summary/summary2019.xlsx") %>% 
   select(1:3,施設名) %>% 
   mutate(年度 = 2019)
+View(summary2019)
+
 colnames_summary <- c("告示番号", "通番", "市町村番号", "施設名", "年度")
 colnames(summary2019) <- colnames_summary
 View(summary2019)
@@ -31,26 +33,17 @@ View(summary2019)
 #これを関数にする
 readsummary <- function(file){
   colnames_summary <- c("告示番号", "通番", "市町村番号", "施設名", "年度")
-  data <- 
-    read_excel(paste0("input/summary/",file)) %>% 
-    select(1:3,施設名) %>% 
-    mutate(年度 = 2019)
-  colnames(data) <- colnames_summary
-  return(data)
-}
-
-
-#inputフォルダの所を少し直してみる
-readsummary <- function(file){
   input_dir <- "input/summary/"
-  colnames_summary <- c("告示番号", "通番", "市町村番号", "施設名", "年度")
+  path <- paste0(input_dir,file)
   data <- 
-    read_excel(paste0(input_dir,file)) %>% 
+    read_excel(path) %>% 
     select(1:3,施設名) %>% 
     mutate(年度 = 2019)
   colnames(data) <- colnames_summary
   return(data)
 }
+
+
 readsummary("summary2019.xlsx")
 readsummary("summary2018.xlsx")
 
@@ -59,13 +52,13 @@ year <- str_extract("summary2019.xlsx","[\\d]{4}")
 print(year)
 
 #関数に加える
-#関数にする
 readsummary <- function(file){
   input_dir <- "input/summary/"
+  path <- paste0(input_dir,file)
   colnames_summary <- c("告示番号", "通番", "市町村番号", "施設名", "年度")
   year <- str_extract(file,"[\\d]{4}")
   data <- 
-    read_excel(paste0(input_dir,file)) %>% 
+    read_excel(path) %>% 
     select(1:3,施設名) %>% 
     mutate(年度 = year)
   colnames(data) <- colnames_summary
@@ -109,9 +102,9 @@ View(summary_master)
 
 summary_master <-
   summary_master %>% 
-  distinct() %>% #重複列を消す
+  distinct() %>% #重複行を消す
   filter(str_detect(告示番号2019,"^[0-9]"))#数値で始まる行のみ残す
-write.csv(summary_master,"output/summary/summary_master.csv")
+write.csv(summary_master,"output/summary/summary_master.csv",row.names = FALSE)
 
 #スライド34へ
 
@@ -212,8 +205,8 @@ setdiff(temp2019,temp2018)
 
 #データの読み込み
 input_dir <- "input/MDC_02_07/"
-file_name <- "MDC_02_8_07_2019.xlsx"
-path <- paste0(input_dir,file_name)
+input_file <- "MDC_02_8_07_2019.xlsx"
+path <- paste0(input_dir,input_file)
 temp <- read_excel(path,
                    col_names = get_colname(path),
                    skip = 4)
@@ -233,7 +226,8 @@ WranglingMDC02x <-
   function(file){
     input_dir <- "input/MDC_02_07/"
     file_name <- file
-    temp <- read_excel(paste0(input_dir,file_name),
+    path <- paste0(input_dir,file)
+    temp <- read_excel(path,
                        col_names = get_colname(paste0(input_dir,file_name)),
                        skip = 4)
     temp <- 
@@ -248,46 +242,45 @@ WranglingMDC02x <-
 #スライド52へ
 
 #施設概要表とjoin。一番右に最新年の施設名が載る
-WranglingMDC02x("MDC_02_8_07_2_2017.xls") %>% 
+input_file <- "MDC_02_8_07_2_2017.xls"
+
+WranglingMDC02x(input_file) %>% 
   left_join(summary_master, by=c("告示番号"="告示番号2017")) %>% View()
 
-WranglingMDC02x("MDC_02_8_07_2_2017.xls") %>% 
+temp <- 
+  WranglingMDC02x(input_file) %>% 
   select(-施設名) %>% #施設名を抜く
   mutate(年度=2017) %>% #年度をつける
   left_join(summary_master, by=c("告示番号"="告示番号2017")) %>% #告示番号を合わせてleft_join
   rename(施設名 = 施設名_基準) %>% #施設名_基準を施設名にする
-  select(告示番号,市町村番号,施設名,年度,starts_with("MDC")) %>% #いるデータだけ選び並び替える
-  View()
+  select(告示番号,市町村番号,施設名,年度,starts_with("MDC")) #いるデータだけ選び並び替える
+View(temp)
 
 #csvファイルを作ってみる
-input_dir <- "input/MDC_02_07/"
 output_dir <- "output/MDC_02_07/"
-file_name <- "MDC_02_8_07_2_2017.xls"
-path <- paste0(input_dir,file_name)
-year <- str_extract(file_name,"[\\d]{4}")
-output_file_name <- str_extract(file_name,"MDC.*[\\d]{4}")
-output_file_path <- paste0(output_dir,output_file_name,".csv")
-write.csv(temp,output_file_path,row.names = TRUE)　#列名の列が増えて欲しいものではない
-write.csv(temp,output_file_path,row.names = FALSE) #こちらが正解
+output_file <- str_extract(input_file,"MDC.*[\\d]{4}")
+output_path <- paste0(output_dir,output_file,".csv")
+write.csv(temp,output_path,row.names = FALSE) 
 
 #csvファイルを作る関数にする
 ReadMDC02x <-
-  function(file,summary){
+  function(input_file,summary){
     input_dir <- "input/MDC_02_07/"
-    output_dir <- "output/MDC_02_07/"
-    file_name <- file
-    path <- paste0(input_dir,file_name)
-    year <- str_extract(file_name,"[\\d]{4}")
-    output_file_name <- str_extract(file_name,"MDC.*[\\d]{4}")
-    output_file_path <- paste0(output_dir,output_file_name,".csv")
+    path <- paste0(input_dir,input_file)
+    year <- str_extract(input_file,"[\\d]{4}")
     
     temp <-
-      WranglingMDC02x(file_name) %>% 
+      WranglingMDC02x(input_file) %>% 
       select(-施設名) %>% #施設名を抜く
       mutate(年度=year) %>% #年度をつける
       left_join(summary, by=c("告示番号"=paste0("告示番号",year))) %>% #告示番号を合わせてleft_join
       rename(施設名 = 施設名_基準) %>% #施設名_基準を施設名にする
       select(告示番号,市町村番号,施設名,年度,starts_with("MDC")) #いるデータだけ選び並び替える
+    
+    output_dir <- "output/MDC_02_07/"
+    output_file <- str_extract(input_file,"MDC.*[\\d]{4}")
+    output_file_path <- paste0(output_dir,output_file,".csv")
+    
     return(write.csv(temp,output_file_path,row.names = FALSE, fileEncoding = "UTF-8"))
     #return(write.csv(temp,output_file_path,row.names = FALSE, fileEncoding = "CP932")) 文字化けするならUTF-8をCP932に変更
   }
