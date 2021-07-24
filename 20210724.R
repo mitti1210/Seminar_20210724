@@ -221,6 +221,13 @@ temp %>%
   mutate(suppressWarnings(across(contains("件数"), parse_number))) %>% 
   mutate(across(contains("件数"),~replace_na(.x,0))) %>% View()
 
+#これでもOK
+temp %>% 
+  select(!contains("在院日数")) %>% 
+  select(!contains("再掲")) %>% 
+  mutate(suppressWarnings(across(contains("件数"), ~parse_number(.x)))) %>% 
+  mutate(across(contains("件数"),~replace_na(.x,0))) %>% View()
+
 #関数にする
 WranglingMDC02x <- 
   function(file){
